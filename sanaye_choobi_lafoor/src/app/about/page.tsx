@@ -12,9 +12,21 @@ import {
 
 export default function AboutPage() {
   const stats = [
-    { number: '10+', label: 'سال تجربه', icon: ClockIcon },
-    { number: '150K+', label: 'مهمان راضی', icon: UsersIcon },
-    { number: '1,500+', label: 'اقامتگاه فعال', icon: TrophyIcon },
+    const [pageContent, setPageContent] = React.useState<any>(null);
+
+    React.useEffect(() => {
+      (async () => {
+        try {
+          const res = await fetch('/api/admin/pages');
+          const payload = await res.json();
+          if (res.ok && payload.success) setPageContent(payload.data.about || null);
+        } catch (err) {
+          // ignore
+        }
+      })();
+    }, []);
+
+    const stats = [
     { number: '28+', label: 'استان تحت پوشش', icon: GlobeAltIcon }
   ];
 
@@ -43,9 +55,11 @@ export default function AboutPage() {
         <div className="absolute inset-0 bg-black bg-opacity-20"></div>
         <div className="max-w-7xl mx-auto px-4 relative z-10">
           <div className="text-center">
-            <h1 className="text-5xl font-bold mb-6">درباره اجاره ویلا سفرجا</h1>
+            <h1 className="text-5xl font-bold mb-6">درباره شرکت تجارت الکترونیک آسایش سفر (سفرجا)</h1>
             <p className="text-xl max-w-3xl mx-auto leading-relaxed">
-              از سال ۱۳۹۲ همراه شما هستیم تا اقامتگاهی امن و دلنشین پیدا کنید
+                {pageContent?.title ?? 'درباره اجاره ویلا سفرجا'}</h1>
+                <p className="text-xl max-w-3xl mx-auto leading-relaxed">
+                  {pageContent?.intro ?? 'از سال ۱۳۹۲ همراه شما هستیم تا اقامتگاهی امن و دلنشین پیدا کنید'}
             </p>
           </div>
         </div>
@@ -59,16 +73,27 @@ export default function AboutPage() {
               <h2 className="text-4xl font-bold text-wood-800 mb-6">داستان ما</h2>
               <div className="space-y-6 text-gray-700 text-lg leading-relaxed">
                 <p>
-                  اجاره ویلا سفرجا در سال ۱۳۹۲ با هدف ساده‌سازی فرآیند رزرو اقامتگاه آغاز به کار کرد.
-                  ما با تکیه بر تجربه سفرهای داخلی و شناخت نیاز مهمانان، پلتفرمی ساختیم که رزرو را سریع، امن و شفاف می‌کند.
+                  سفر جا (شرکت تجارت الکترونیک آسایش سفر) در سال ۱۳۹۶ با ایده‌ای ساده اما قدرتمند آغاز شد: ایجاد پلی میان مسافران و صاحبان ویلاهای منحصربه‌فرد در سراسر ایران. ما معتقدیم که هر سفر باید تجربه‌ای فراموش‌نشدنی باشد و هر ویلا داستانی خاص برای گفتن داشته باشد.
                 </p>
                 <p>
-                  همکاری با میزبانان حرفه‌ای، بررسی مستمر کیفیت اقامتگاه‌ها و 
-                  پشتیبانی در طول سفر، اصول اصلی کار ما محسوب می‌شوند.
+                  با تیمی متخصص و علاقه‌مند به گردشگری، ما هر ویلا را به دقت بررسی می‌کنیم. از استانداردهای بهداشتی گرفته تا زیبایی طبیعی منطقه، همه چیز برای ما اهمیت دارد.
                 </p>
                 <p>
-                  امروز پس از سال‌ها فعالیت، مفتخریم که هزاران مهمان از طریق سفرجا تجربه اقامتی دلنشین داشته‌اند.
+                  امروز پس از ۸ سال فعالیت مستمر، مفتخریم که بیش از 4000 هزار خانواده ایرانی در بهترین ویلاهای کشور اقامت داشته‌اند و خاطرات شیرینی ساخته‌اند. در ادامه داستان ما اینه.
                 </p>
+                  <div dangerouslySetInnerHTML={{ __html: (pageContent?.story ?? `
+                    <p>
+                      اجاره ویلا سفرجا در سال ۱۳۹۲ با هدف ساده‌سازی فرآیند رزرو اقامتگاه آغاز به کار کرد.
+                      ما با تکیه بر تجربه سفرهای داخلی و شناخت نیاز مهمانان، پلتفرمی ساختیم که رزرو را سریع، امن و شفاف می‌کند.
+                    </p>
+                    <p>
+                      همکاری با میزبانان حرفه‌ای، بررسی مستمر کیفیت اقامتگاه‌ها و 
+                      پشتیبانی در طول سفر، اصول اصلی کار ما محسوب می‌شوند.
+                    </p>
+                    <p>
+                      امروز پس از سال‌ها فعالیت، مفتخریم که هزاران مهمان از طریق سفرجا تجربه اقامتی دلنشین داشته‌اند.
+                    </p>
+                  `) }} />
               </div>
             </div>
             <div className="relative">
@@ -76,7 +101,7 @@ export default function AboutPage() {
                 <div className="text-wood-400 text-8xl">🏭</div>
               </div>
               <div className="absolute -bottom-6 -right-6 bg-wood-600 text-white p-4 rounded-2xl">
-                <div className="text-2xl font-bold">۱۳۹۲</div>
+                <div className="text-2xl font-bold">۱۳۹۶</div>
                 <div className="text-sm">سال تأسیس</div>
               </div>
             </div>
@@ -169,7 +194,7 @@ export default function AboutPage() {
             برای کسب اطلاعات بیشتر یا رزرو اقامتگاه، همین امروز با ما تماس بگیرید
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button className="bg-wood-700 text-white px-8 py-4 rounded-xl font-bold hover:bg-wood-800 transition-colors">
+            <button className="bg-black text-white px-8 py-4 rounded-xl font-bold hover:bg-gray-800 transition-colors">
               تماس با ما
             </button>
             <button className="border-2 border-wood-700 text-wood-700 px-8 py-4 rounded-xl font-bold hover:bg-wood-700 hover:text-white transition-colors">

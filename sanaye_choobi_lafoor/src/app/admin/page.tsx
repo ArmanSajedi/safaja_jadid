@@ -38,6 +38,7 @@ const tabs = [
   { id: 'reports', name: 'گزارشات و تسويه ها', icon: ChartBarIcon },
   { id: 'reviews', name: 'نظرات و امتيازها', icon: StarIcon },
   { id: 'content', name: 'محتوا و بلاگ', icon: DocumentTextIcon },
+  { id: 'pages', name: 'ویرایش صفحات', icon: PencilSquareIcon },
   { id: 'settings', name: 'تنظيمات سايت', icon: CogIcon },
 ];
 
@@ -278,7 +279,29 @@ export default function AdminDashboardPage() {
     if (activeTab === 'content') {
       loadBlogPosts();
     }
+    if (activeTab === 'pages') {
+      loadPages();
+    }
   }, [activeTab]);
+
+  const [pagesData, setPagesData] = useState<any>(null);
+  const [pagesLoading, setPagesLoading] = useState(false);
+  const [pagesError, setPagesError] = useState<string | null>(null);
+
+  const loadPages = async () => {
+    try {
+      setPagesLoading(true);
+      const res = await fetch('/api/admin/pages');
+      const payload = await res.json();
+      if (!res.ok || !payload.success) throw new Error(payload.message || 'Error');
+      setPagesData(payload.data);
+    } catch (err) {
+      console.error(err);
+      setPagesError('خطا در دریافت محتوا');
+    } finally {
+      setPagesLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (activeTab === 'hosts') {
@@ -409,6 +432,23 @@ export default function AdminDashboardPage() {
     setBlogImageError(null);
     setBlogSuccess(null);
     setBlogError(null);
+  };
+
+  const savePages = async (updated: any) => {
+    try {
+      const res = await fetch('/api/admin/pages', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updated),
+      });
+      const payload = await res.json();
+      if (!res.ok || !payload.success) throw new Error(payload.message || 'Error');
+      setPagesData(updated);
+      alert('محتوا با موفقیت ذخیره شد.');
+    } catch (err) {
+      console.error(err);
+      alert('خطا در ذخیره محتوا');
+    }
   };
 
   const deleteBlogPost = async (postId: number, title: string) => {
@@ -1233,6 +1273,38 @@ export default function AdminDashboardPage() {
                           </div>
                         ))}
                       </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'pages' && (
+                <div className="space-y-4">
+                  <h2 className="text-2xl font-bold text-wood-800">ویرایش محتوای صفحات</h2>
+                  <div className="rounded-2xl border border-wood-100 p-4">
+                    {pagesLoading && <p>در حال بارگذاری...</p>}
+                    {pagesError && <p className="text-red-600">{pagesError}</p>}
+                    {pagesData ? (
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block font-semibold mb-2">عنوان درباره ما</label>
+                          <input className="w-full p-3 border rounded-lg" value={pagesData.about.title} onChange={(e) => setPagesData({ ...pagesData, about: { ...pagesData.about, title: e.target.value } })} />
+                        </div>
+                        <div>
+                          <label className="block font-semibold mb-2">متن کوتاه بالای درباره ما</label>
+                          <textarea className="w-full p-3 border rounded-lg" rows={3} value={pagesData.about.intro} onChange={(e) => setPagesData({ ...pagesData, about: { ...pagesData.about, intro: e.target.value } })} />
+                        </div>
+                        <div>
+                          <label className="block font-semibold mb-2">متن داستان ما</label>
+                          <textarea className="w-full p-3 border rounded-lg" rows={8} value={pagesData.about.story} onChange={(e) => setPagesData({ ...pagesData, about: { ...pagesData.about, story: e.target.value } })} />
+                        </div>
+                        <div className="flex gap-3">
+                          <button className="bg-wood-700 text-white px-4 py-2 rounded-lg" onClick={() => savePages(pagesData)}>ذخیره</button>
+                          <button className="border border-wood-200 px-4 py-2 rounded-lg" onClick={() => loadPages()}>بازنشانی</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-500">محتوا بارگذاری نشده است.</p>
                     )}
                   </div>
                 </div>

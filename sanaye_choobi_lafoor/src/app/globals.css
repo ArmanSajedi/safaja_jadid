@@ -1,13 +1,5 @@
-@import url('https://cdn.jsdelivr.net/gh/rastikerdar/vazir-font@v30.1.0/dist/font-face.css');
-@import url('https://cdn.jsdelivr.net/gh/rastikerdar/shabnam-font@v5.0.1/dist/font-face.css');
+@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100..900&display=swap');
 @import "tailwindcss";
-
-/* Persian Fonts */
-@font-face {
-  font-family: 'IRANSans';
-  src: url('https://cdn.jsdelivr.net/gh/rastikerdar/iran-sans@v5.0.0/dist/font-face.css');
-  font-display: swap;
-}
 
 :root {
   --background: #F5F5DC;
@@ -20,7 +12,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: 'Vazir', 'Shabnam', 'IRANSans', Tahoma, Arial, sans-serif;
+  --font-sans: 'Vazirmatn', Tahoma, Arial, sans-serif;
   --font-mono: var(--font-geist-mono);
 }
 
@@ -35,7 +27,7 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: 'Vazir', 'Shabnam', 'IRANSans', Tahoma, Arial, sans-serif;
+  font-family: 'Vazirmatn', Tahoma, Arial, sans-serif;
   direction: rtl;
   text-align: right;
   min-height: 100dvh;

@@ -45,19 +45,19 @@ export default function ContactPage() {
     {
       icon: PhoneIcon,
       title: 'تلفن تماس',
-      details: ['021-88776655', '021-88776644'],
+      details: ['011-4244-4703', 'پشتیبانی ۲۴ ساعته'],
       color: 'from-green-500 to-green-600'
     },
     {
       icon: EnvelopeIcon,
       title: 'ایمیل',
-      details: ['info@laforvillas.ir', 'support@laforvillas.ir'],
+      details: ['info@safarja.com', 'support@safarja.com'],
       color: 'from-blue-500 to-blue-600'
     },
     {
       icon: MapPinIcon,
       title: 'آدرس',
-      details: ['تهران، بزرگراه ستاری، خیابان صنعتی', 'پلاک 245، دفتر مرکزی سفرجا'],
+      details: ['مازندران، سوادکوه، شهر شیرگاه', 'کوچه شهید تیموری، جنب ثبت احوال، دفتر رزرواسیون'],
       color: 'from-red-500 to-red-600'
     },
     {
@@ -228,7 +228,7 @@ export default function ContactPage() {
                 <div className="text-center text-gray-500">
                   <MapPinIcon className="w-16 h-16 mx-auto mb-4" />
                   <p className="text-lg font-medium">نقشه تعاملی</p>
-                  <p className="text-sm">تهران، بزرگراه ستاری، خیابان صنعتی</p>
+                  <p className="text-sm">مازندران، سوادکوه، شهر شیرگاه</p>
                 </div>
               </div>
             </div>
@@ -244,24 +244,23 @@ export default function ContactPage() {
                   <MapPinIcon className="w-5 h-5 text-wood-600 mt-1 flex-shrink-0" />
                   <div>
                     <p className="font-medium">آدرس کامل:</p>
-                    <p className="text-sm">تهران، بزرگراه ستاری، خیابان صنعتی، پلاک 245، طبقه 3، واحد 12</p>
+                    <p className="text-sm">مازندران، سوادکوه، شهر شیرگاه، کوچه شهید تیموری، جنب ثبت احوال، دفتر رزرواسیون</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
                   <PhoneIcon className="w-5 h-5 text-wood-600 mt-1 flex-shrink-0" />
                   <div>
                     <p className="font-medium">تلفن‌های تماس:</p>
-                    <p className="text-sm">021-88776655 (دفتر مرکزی)</p>
-                    <p className="text-sm">021-88776644 (فروش)</p>
+                    <p className="text-sm">011-4244-4703</p>
+                    <p className="text-sm">پشتیبانی ۲۴ ساعته</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
                   <ClockIcon className="w-5 h-5 text-wood-600 mt-1 flex-shrink-0" />
                   <div>
                     <p className="font-medium">ساعات کاری:</p>
-                    <p className="text-sm">شنبه تا چهارشنبه: 8:00 تا 17:00</p>
-                    <p className="text-sm">پنجشنبه: 8:00 تا 13:00</p>
-                    <p className="text-sm text-red-600">جمعه تعطیل</p>
+                    <p className="text-sm">شنبه تا چهارشنبه: 8 تا 17</p>
+                    <p className="text-sm">پنجشنبه: 8 تا 13</p>
                   </div>
                 </div>
               </div>
@@ -277,7 +276,7 @@ export default function ContactPage() {
               { q: 'چگونه می‌توانم رزرو انجام دهم؟', a: 'از طریق سایت، تلفن یا همین فرم می‌توانید درخواست رزرو ثبت کنید.' },
               { q: 'شرایط لغو رزرو چگونه است؟', a: 'قوانین لغو برای هر اقامتگاه مشخص است و قبل از پرداخت نمایش داده می‌شود.' },
               { q: 'چه ساعتی می‌توانم اقامتگاه را تحویل بگیرم؟', a: 'زمان ورود و خروج در صفحه هر اقامتگاه درج شده است.' },
-              { q: 'آیا پشتیبانی در طول سفر دارید؟', a: 'بله، پشتیبانی ۲۴/۷ در طول سفر همراه شماست.' }
+              { q: 'آیا پشتیبانی در طول سفر دارید؟', a: 'بله، پشتیبانی ۲۴ ساعته در طول سفر همراه شماست.' }
             ].map((faq, index) => (
               <div key={index} className="border-r-4 border-wood-500 pr-4">
                 <h4 className="font-bold text-wood-800 mb-2">{faq.q}</h4>

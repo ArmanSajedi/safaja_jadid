@@ -17,6 +17,24 @@ import {
 } from '@heroicons/react/24/outline';
 
 export default function ServicesPage() {
+  const [heroTitle, setHeroTitle] = React.useState('خدمات حرفه ای سفرجا');
+  const [heroIntro, setHeroIntro] = React.useState('از انتخاب مقصد تا پایان اقامت، هر قدم با ابزارهای کاربردی و پشتیبانی واقعی.');
+
+  React.useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/admin/pages');
+        const payload = await res.json();
+        if (res.ok && payload.success && payload.data?.services) {
+          setHeroTitle(payload.data.services.heroTitle || heroTitle);
+          setHeroIntro(payload.data.services.heroIntro || heroIntro);
+        }
+      } catch (err) {
+        // ignore
+      }
+    })();
+  }, []);
+
   const pillars = [
     {
       title: 'رزرو هوشمند',

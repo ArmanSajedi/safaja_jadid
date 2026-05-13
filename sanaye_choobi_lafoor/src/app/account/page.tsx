@@ -16,24 +16,158 @@ import {
 
 export default function AccountPage() {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [isLoggedIn, setIsLoggedIn] = useState(false); // برای تست، بعداً از authentication استفاده می‌کنیم
-  const [authView, setAuthView] = useState<'login' | 'register'>('login');
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userProfile, setUserProfile] = useState<{ firstName: string; lastName: string; phone: string } | null>(null);
+  const [authStep, setAuthStep] = useState<'phone' | 'code' | 'profile'>('phone');
+  const [phone, setPhone] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [code, setCode] = useState('');
+  const [requesting, setRequesting] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [authError, setAuthError] = useState('');
+  const [authMessage, setAuthMessage] = useState('');
 
   useEffect(() => {
     const stored = localStorage.getItem('demo-auth');
-    if (stored === 'true') {
-      setIsLoggedIn(true);
+    const storedUser = localStorage.getItem('demo-user');
+    if (stored === 'true' && storedUser) {
+      try {
+        const parsed = JSON.parse(storedUser) as { firstName: string; lastName: string; phone: string };
+        setUserProfile(parsed);
+        setIsLoggedIn(true);
+      } catch {
+        localStorage.removeItem('demo-auth');
+        localStorage.removeItem('demo-user');
+      }
     }
   }, []);
 
-  const handleLogin = () => {
-    localStorage.setItem('demo-auth', 'true');
-    setIsLoggedIn(true);
-  };
-
   const handleLogout = () => {
     localStorage.removeItem('demo-auth');
+    localStorage.removeItem('demo-user');
     setIsLoggedIn(false);
+    setUserProfile(null);
+  };
+
+  const handleSendCode = async () => {
+    setAuthError('');
+    setAuthMessage('');
+    const normalizedPhone = phone.replace(/[^0-9]/g, '').trim();
+    if (!normalizedPhone) {
+      setAuthError('شماره موبایل را وارد کنید.');
+      return;
+    }
+
+    try {
+      setRequesting(true);
+      const response = await fetch('/api/auth/request-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: normalizedPhone }),
+      });
+      const payload = await response.json();
+      if (!response.ok || !payload.success) {
+        throw new Error(payload.message || 'ارسال کد ناموفق بود.');
+      }
+      setAuthStep('code');
+      setAuthMessage('کد تایید ارسال شد.');
+    } catch (error) {
+      console.error(error);
+      setAuthError(error instanceof Error ? error.message : 'ارسال کد ناموفق بود.');
+    } finally {
+      setRequesting(false);
+    }
+  };
+
+  const handleVerifyCode = async () => {
+    setAuthError('');
+    setAuthMessage('');
+    const normalizedPhone = phone.replace(/[^0-9]/g, '').trim();
+    if (!normalizedPhone || !code.trim()) {
+      setAuthError('شماره موبایل و کد تایید الزامی است.');
+      return;
+    }
+    try {
+      setVerifying(true);
+      const response = await fetch('/api/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phone: normalizedPhone,
+          code: code.trim(),
+        }),
+      });
+      const payload = await response.json();
+      if (!response.ok || !payload.success) {
+        throw new Error(payload.message || 'تایید کد ناموفق بود.');
+      }
+
+      if (payload.requiresProfile) {
+        setAuthStep('profile');
+        setAuthMessage('کد تایید شد. لطفاً نام و نام خانوادگی را وارد کنید.');
+        return;
+      }
+
+      const nextProfile = {
+        firstName: payload.data.firstName,
+        lastName: payload.data.lastName,
+        phone: payload.data.phone,
+      };
+
+      localStorage.setItem('demo-auth', 'true');
+      localStorage.setItem('demo-user', JSON.stringify(nextProfile));
+      setUserProfile(nextProfile);
+      setIsLoggedIn(true);
+    } catch (error) {
+      console.error(error);
+      setAuthError(error instanceof Error ? error.message : 'تایید کد ناموفق بود.');
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  const handleCompleteProfile = async () => {
+    setAuthError('');
+    setAuthMessage('');
+    const normalizedPhone = phone.replace(/[^0-9]/g, '').trim();
+    if (!normalizedPhone || !firstName.trim() || !lastName.trim()) {
+      setAuthError('نام و نام خانوادگی را کامل وارد کنید.');
+      return;
+    }
+
+    try {
+      setVerifying(true);
+      const response = await fetch('/api/auth/complete-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phone: normalizedPhone,
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+        }),
+      });
+      const payload = await response.json();
+      if (!response.ok || !payload.success) {
+        throw new Error(payload.message || 'ثبت اطلاعات ناموفق بود.');
+      }
+
+      const nextProfile = {
+        firstName: payload.data.firstName,
+        lastName: payload.data.lastName,
+        phone: payload.data.phone,
+      };
+
+      localStorage.setItem('demo-auth', 'true');
+      localStorage.setItem('demo-user', JSON.stringify(nextProfile));
+      setUserProfile(nextProfile);
+      setIsLoggedIn(true);
+    } catch (error) {
+      console.error(error);
+      setAuthError(error instanceof Error ? error.message : 'ثبت اطلاعات ناموفق بود.');
+    } finally {
+      setVerifying(false);
+    }
   };
 
   const tabs = [
@@ -71,72 +205,48 @@ export default function AccountPage() {
                 <UserIcon className="h-10 w-10 text-wood-600" />
               </div>
               <h1 className="text-2xl font-bold text-wood-800 mb-2">
-                {authView === 'login' ? 'ورود به حساب کاربری' : 'ثبت نام در سفرجا'}
+                ورود / ثبت نام با پیامک
               </h1>
               <p className="text-forest-600">
-                {authView === 'login' ? 'برای دسترسی به حساب خود وارد شوید' : 'برای شروع، اطلاعات خود را وارد کنید'}
+                شماره موبایل را وارد کنید تا کد تایید ارسال شود.
               </p>
             </div>
 
-            {authView === 'login' ? (
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-wood-700 font-semibold mb-2">شماره موبایل</label>
-                  <input
-                    type="tel"
-                    placeholder="09123456789"
-                    className="w-full p-3 border border-wood-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-wood-500 text-right"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-wood-700 font-semibold mb-2">رمز عبور</label>
-                  <input
-                    type="password"
-                    placeholder="رمز عبور خود را وارد کنید"
-                    className="w-full p-3 border border-wood-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-wood-500 text-right"
-                  />
-                </div>
-
-                <button
-                  onClick={handleLogin}
-                  className="w-full bg-wood-600 text-white py-3 rounded-lg hover:bg-wood-700 transition-colors font-semibold"
-                >
-                  ورود
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleLogin}
-                  className="w-full bg-wood-50 text-wood-700 py-3 rounded-lg hover:bg-wood-100 transition-colors font-semibold"
-                >
-                  مشاهده حساب (نمایشی)
-                </button>
-
-                <div className="text-center">
-                  <button className="text-wood-600 hover:text-wood-700 text-sm">
-                    رمز عبور را فراموش کرده‌اید؟
-                  </button>
-                </div>
-
-                <div className="border-t border-wood-200 pt-4 text-center">
-                  <p className="text-forest-600 mb-3">حساب کاربری ندارید؟</p>
-                  <button
-                    className="w-full bg-white border-2 border-wood-600 text-wood-600 py-3 rounded-lg hover:bg-wood-50 transition-colors font-semibold"
-                    onClick={() => setAuthView('register')}
-                  >
-                    ثبت نام
-                  </button>
-                </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-wood-700 font-semibold mb-2">شماره موبایل</label>
+                <input
+                  type="tel"
+                  placeholder="09123456789"
+                  value={phone}
+                  onChange={(event) => setPhone(event.target.value)}
+                  disabled={authStep !== 'phone'}
+                  className="w-full p-3 border border-wood-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-wood-500 text-right disabled:bg-gray-100"
+                />
               </div>
-            ) : (
-              <div className="space-y-4">
+
+              {authStep === 'code' && (
+                <div>
+                  <label className="block text-wood-700 font-semibold mb-2">کد تایید</label>
+                  <input
+                    type="text"
+                    placeholder="کد پیامک شده"
+                    value={code}
+                    onChange={(event) => setCode(event.target.value)}
+                    className="w-full p-3 border border-wood-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-wood-500 text-right"
+                  />
+                </div>
+              )}
+
+              {authStep === 'profile' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-wood-700 font-semibold mb-2">نام</label>
                     <input
                       type="text"
                       placeholder="نام"
+                      value={firstName}
+                      onChange={(event) => setFirstName(event.target.value)}
                       className="w-full p-3 border border-wood-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-wood-500 text-right"
                     />
                   </div>
@@ -145,56 +255,58 @@ export default function AccountPage() {
                     <input
                       type="text"
                       placeholder="نام خانوادگی"
+                      value={lastName}
+                      onChange={(event) => setLastName(event.target.value)}
                       className="w-full p-3 border border-wood-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-wood-500 text-right"
                     />
                   </div>
                 </div>
+              )}
 
-                <div>
-                  <label className="block text-wood-700 font-semibold mb-2">شماره موبایل</label>
-                  <input
-                    type="tel"
-                    placeholder="09123456789"
-                    className="w-full p-3 border border-wood-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-wood-500 text-right"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-wood-700 font-semibold mb-2">ایمیل (اختیاری)</label>
-                  <input
-                    type="email"
-                    placeholder="name@example.com"
-                    className="w-full p-3 border border-wood-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-wood-500 text-right"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-wood-700 font-semibold mb-2">رمز عبور</label>
-                  <input
-                    type="password"
-                    placeholder="رمز عبور دلخواه"
-                    className="w-full p-3 border border-wood-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-wood-500 text-right"
-                  />
-                </div>
-
+              {authStep === 'phone' && (
                 <button
-                  onClick={handleLogin}
-                  className="w-full bg-wood-600 text-white py-3 rounded-lg hover:bg-wood-700 transition-colors font-semibold"
+                  type="button"
+                  onClick={handleSendCode}
+                  disabled={requesting}
+                  className="w-full rounded-lg border border-black bg-white py-3 font-semibold text-black transition-colors hover:bg-black hover:text-white disabled:opacity-50"
                 >
-                  ایجاد حساب و ورود
+                  {requesting ? 'در حال ارسال کد...' : 'ارسال کد تایید'}
                 </button>
+              )}
 
-                <div className="border-t border-wood-200 pt-4 text-center">
-                  <p className="text-forest-600 mb-3">قبلا حساب دارید؟</p>
-                  <button
-                    className="w-full bg-white border-2 border-wood-600 text-wood-600 py-3 rounded-lg hover:bg-wood-50 transition-colors font-semibold"
-                    onClick={() => setAuthView('login')}
-                  >
-                    ورود به حساب
-                  </button>
+              {authStep === 'code' && (
+                <button
+                  type="button"
+                  onClick={handleVerifyCode}
+                  disabled={verifying}
+                  className="w-full rounded-lg border border-black bg-white py-3 font-semibold text-black transition-colors hover:bg-black hover:text-white disabled:opacity-50"
+                >
+                  {verifying ? 'در حال تایید...' : 'تایید کد'}
+                </button>
+              )}
+
+              {authStep === 'profile' && (
+                <button
+                  type="button"
+                  onClick={handleCompleteProfile}
+                  disabled={verifying}
+                  className="w-full rounded-lg border border-black bg-white py-3 font-semibold text-black transition-colors hover:bg-black hover:text-white disabled:opacity-50"
+                >
+                  {verifying ? 'در حال ثبت...' : 'ثبت نام و ورود'}
+                </button>
+              )}
+
+              {authMessage && (
+                <div className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">
+                  {authMessage}
                 </div>
-              </div>
-            )}
+              )}
+              {authError && (
+                <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                  {authError}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -212,8 +324,8 @@ export default function AccountPage() {
                 <div className="w-20 h-20 bg-wood-200 rounded-full flex items-center justify-center mx-auto mb-4">
                   <UserIcon className="h-10 w-10 text-wood-600" />
                 </div>
-                <h2 className="text-lg font-bold text-wood-800">احمد محمدی</h2>
-                <p className="text-forest-600 text-sm">عضو از مهر 1402</p>
+                <h2 className="text-lg font-bold text-wood-800">{userProfile ? `${userProfile.firstName} ${userProfile.lastName}` : 'کاربر'}</h2>
+                <p className="text-forest-600 text-sm">شماره: {userProfile?.phone || '—'}</p>
               </div>
 
               <nav className="space-y-2">
@@ -288,36 +400,44 @@ export default function AccountPage() {
                       <label className="block text-wood-700 font-semibold mb-2">نام</label>
                       <input
                         type="text"
-                        defaultValue="احمد"
-                        className="w-full p-3 border border-wood-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-wood-500 text-right"
+                        value={userProfile?.firstName || ''}
+                        readOnly
+                        className="w-full p-3 border border-wood-200 rounded-lg bg-cream-50 text-right"
                       />
                     </div>
                     <div>
                       <label className="block text-wood-700 font-semibold mb-2">نام خانوادگی</label>
                       <input
                         type="text"
-                        defaultValue="محمدی"
-                        className="w-full p-3 border border-wood-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-wood-500 text-right"
+                        value={userProfile?.lastName || ''}
+                        readOnly
+                        className="w-full p-3 border border-wood-200 rounded-lg bg-cream-50 text-right"
                       />
                     </div>
                     <div>
                       <label className="block text-wood-700 font-semibold mb-2">شماره موبایل</label>
                       <input
                         type="tel"
-                        defaultValue="09123456789"
-                        className="w-full p-3 border border-wood-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-wood-500 text-right"
+                        value={userProfile?.phone || ''}
+                        readOnly
+                        className="w-full p-3 border border-wood-200 rounded-lg bg-cream-50 text-right"
                       />
                     </div>
                     <div>
                       <label className="block text-wood-700 font-semibold mb-2">ایمیل</label>
                       <input
                         type="email"
-                        defaultValue="ahmad@example.com"
-                        className="w-full p-3 border border-wood-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-wood-500 text-right"
+                        value=""
+                        readOnly
+                        className="w-full p-3 border border-wood-200 rounded-lg bg-cream-50 text-right"
                       />
                     </div>
                   </div>
-                  <button className="mt-6 bg-wood-600 text-white px-8 py-3 rounded-lg hover:bg-wood-700 transition-colors font-semibold">
+                  <button
+                    type="button"
+                    disabled
+                    className="mt-6 rounded-lg border border-wood-200 bg-wood-50 px-8 py-3 font-semibold text-wood-600"
+                  >
                     ذخیره تغییرات
                   </button>
                 </div>

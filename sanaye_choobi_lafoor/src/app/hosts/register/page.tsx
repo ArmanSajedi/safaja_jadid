@@ -15,6 +15,13 @@ import {
 export default function HostRegisterPage() {
   const router = useRouter();
   const [successMessage, setSuccessMessage] = useState('');
+  const [loginPhone, setLoginPhone] = useState('');
+  const [loginCode, setLoginCode] = useState('');
+  const [loginStep, setLoginStep] = useState<'phone' | 'code'>('phone');
+  const [loginRequesting, setLoginRequesting] = useState(false);
+  const [loginVerifying, setLoginVerifying] = useState(false);
+  const [loginError, setLoginError] = useState('');
+  const [loginMessage, setLoginMessage] = useState('');
   const [formData, setFormData] = useState({
     personalInfo: {
       firstName: '',
@@ -73,6 +80,80 @@ export default function HostRegisterPage() {
     } catch (err) {
       console.error(err);
       setSuccessMessage('ثبت درخواست ناموفق بود. لطفاً دوباره تلاش کنید.');
+    }
+  };
+
+  const handleHostLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginError('');
+    setLoginMessage('');
+
+    const normalizedPhone = loginPhone.replace(/[^0-9]/g, '').trim();
+    if (!normalizedPhone) {
+      setLoginError('شماره موبایل را وارد کنید.');
+      return;
+    }
+
+    try {
+      setLoginRequesting(true);
+      const response = await fetch('/api/hosts/auth/request-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: normalizedPhone }),
+      });
+      const payload = await response.json();
+      if (!response.ok || !payload.success) {
+        throw new Error(payload.message || 'ارسال کد ناموفق بود.');
+      }
+
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem('demo-current-host-phone', normalizedPhone);
+      }
+      setLoginStep('code');
+      setLoginMessage('کد تایید ارسال شد. لطفا کد را وارد کنید.');
+    } catch (err) {
+      console.error(err);
+      setLoginError(err instanceof Error ? err.message : 'ارسال کد ناموفق بود.');
+    } finally {
+      setLoginRequesting(false);
+    }
+  };
+
+  const handleHostVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginError('');
+    setLoginMessage('');
+
+    const normalizedPhone = loginPhone.replace(/[^0-9]/g, '').trim();
+    if (!normalizedPhone || !loginCode.trim()) {
+      setLoginError('شماره موبایل و کد تایید الزامی است.');
+      return;
+    }
+
+    try {
+      setLoginVerifying(true);
+      const response = await fetch('/api/hosts/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: normalizedPhone, code: loginCode.trim() }),
+      });
+      const payload = await response.json();
+      if (!response.ok || !payload.success) {
+        throw new Error(payload.message || 'تایید کد ناموفق بود.');
+      }
+
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem('demo-host-auth', 'true');
+        window.localStorage.setItem('demo-current-host-phone', normalizedPhone);
+      }
+
+      setLoginMessage('ورود با موفقیت انجام شد.');
+      router.push('/hosts/dashboard');
+    } catch (err) {
+      console.error(err);
+      setLoginError(err instanceof Error ? err.message : 'تایید کد ناموفق بود.');
+    } finally {
+      setLoginVerifying(false);
     }
   };
 
@@ -250,6 +331,56 @@ export default function HostRegisterPage() {
 
           {/* Sidebar Info */}
           <div className="space-y-6">
+            <div className="bg-white rounded-2xl shadow-xl p-6 border border-cream-200">
+              <h3 className="text-xl font-bold text-wood-800 mb-4">ورود میزبان</h3>
+              <p className="text-sm text-gray-600 mb-4">اگر قبلا ثبت نام کرده اید، با شماره موبایل وارد پنل شوید.</p>
+              <form onSubmit={loginStep === 'phone' ? handleHostLogin : handleHostVerify} className="space-y-3">
+                <input
+                  type="tel"
+                  value={loginPhone}
+                  onChange={(e) => setLoginPhone(e.target.value)}
+                  className="w-full p-3 border border-wood-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-wood-500 text-right"
+                  placeholder="شماره موبایل"
+                  disabled={loginStep === 'code'}
+                />
+                {loginStep === 'code' && (
+                  <input
+                    type="text"
+                    value={loginCode}
+                    onChange={(e) => setLoginCode(e.target.value)}
+                    className="w-full p-3 border border-wood-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-wood-500 text-right"
+                    placeholder="کد تایید"
+                  />
+                )}
+                <button
+                  type="submit"
+                  disabled={loginStep === 'phone' ? loginRequesting : loginVerifying}
+                  className="w-full rounded-xl border border-black bg-white px-4 py-3 text-sm font-semibold text-black transition-colors hover:bg-black hover:text-white disabled:opacity-50"
+                >
+                  {loginStep === 'phone' ? 'ارسال کد ورود' : 'تایید و ورود'}
+                </button>
+                {loginStep === 'code' && (
+                  <button
+                    type="button"
+                    onClick={() => setLoginStep('phone')}
+                    className="w-full rounded-xl border border-wood-200 bg-white px-4 py-3 text-sm font-semibold text-wood-700 transition-colors hover:bg-cream-50"
+                  >
+                    ویرایش شماره موبایل
+                  </button>
+                )}
+                {loginMessage && (
+                  <div className="rounded-xl border border-green-200 bg-green-50 p-3 text-sm text-green-700">
+                    {loginMessage}
+                  </div>
+                )}
+                {loginError && (
+                  <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                    {loginError}
+                  </div>
+                )}
+              </form>
+            </div>
+
             <div className="bg-white rounded-2xl shadow-xl p-6">
               <h3 className="text-xl font-bold text-wood-800 mb-4">مزایای همکاری</h3>
               <ul className="space-y-3 text-sm">

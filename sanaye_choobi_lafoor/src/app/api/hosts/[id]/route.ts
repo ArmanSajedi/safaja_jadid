@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
+import Kavenegar from 'kavenegar';
 import { eq } from 'drizzle-orm';
 
 import { getDb, persistDb } from '@/lib/db';
-import { hosts } from '@/lib/schema';
+import { hosts, hostOtpCodes } from '@/lib/schema';
 
 const getIdFromUrl = (url: string) => {
   const pathname = new URL(url).pathname;
@@ -55,6 +56,44 @@ export async function PATCH(request: Request) {
   }
 
   updates.updatedAt = new Date().toISOString();
+
+  const shouldSendOtp = body.status === 'approved' && existing.status !== 'approved';
+
+  if (shouldSendOtp) {
+    const apiKey = process.env.KAVENEGAR_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json({ success: false, message: 'Kavenegar API key is not configured.' }, { status: 500 });
+    }
+
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + 5 * 60 * 1000);
+
+    await db.insert(hostOtpCodes).values({
+      hostId: existing.id,
+      phone: existing.phone,
+      code,
+      createdAt: now.toISOString(),
+      expiresAt: expiresAt.toISOString(),
+      usedAt: null,
+    });
+
+    const sender = process.env.KAVENEGAR_SENDER || '2000200348';
+    const api = Kavenegar.KavenegarApi({ apikey: apiKey });
+    await new Promise<void>((resolve, reject) => {
+      api.Send({
+        receptor: existing.phone,
+        sender,
+        message: `کد تایید میزبان سفرجا: ${code}`,
+      }, (_response: unknown, status: number) => {
+        if (status >= 200 && status < 300) {
+          resolve();
+        } else {
+          reject(new Error(`Kavenegar error: ${status}`));
+        }
+      });
+    });
+  }
 
   const [updated] = await db.update(hosts).set(updates).where(eq(hosts.id, Number(id))).returning();
 

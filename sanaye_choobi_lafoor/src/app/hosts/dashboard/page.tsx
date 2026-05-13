@@ -12,6 +12,7 @@ import {
   TrashIcon,
   ShieldCheckIcon,
 } from '@heroicons/react/24/outline';
+import { JalaaliDateTimePicker } from 'jalaali-date-time-picker';
 
 import type { Product } from '@/lib/api-client';
 
@@ -28,6 +29,14 @@ const tabs = [
 
 export default function HostDashboardPage() {
   const [activeTab, setActiveTab] = useState('new-villa');
+  const [isHostAuthed, setIsHostAuthed] = useState(false);
+  const [hostPhone, setHostPhone] = useState('');
+  const [hostCode, setHostCode] = useState('');
+  const [hostAuthStep, setHostAuthStep] = useState<'phone' | 'code'>('phone');
+  const [hostAuthMessage, setHostAuthMessage] = useState('');
+  const [hostAuthError, setHostAuthError] = useState('');
+  const [hostRequesting, setHostRequesting] = useState(false);
+  const [hostVerifying, setHostVerifying] = useState(false);
   const [applicationStatus, setApplicationStatus] = useState<{
     id: number;
     phone: string;
@@ -70,6 +79,7 @@ export default function HostDashboardPage() {
   const [myVillas, setMyVillas] = useState<Product[]>([]);
   const [myVillasLoading, setMyVillasLoading] = useState(false);
   const [myVillasError, setMyVillasError] = useState('');
+  const [discountForms, setDiscountForms] = useState<Record<number, { percent: string; startDate: string; endDate: string }>>({});
   const [selectedMonth, setSelectedMonth] = useState('شهريور ۱۴۰۳');
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [calendar, setCalendar] = useState(() => ({
@@ -92,6 +102,20 @@ export default function HostDashboardPage() {
     if (!selectedDay) return null;
     return calendar[selectedDay] || { price: 0, status: 'available' };
   }, [calendar, selectedDay]);
+
+  const toIsoDate = (value?: Date | null) => {
+    if (!value) return '';
+    const year = value.getFullYear();
+    const month = String(value.getMonth() + 1).padStart(2, '0');
+    const day = String(value.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const parseIsoDate = (value?: string) => {
+    if (!value) return undefined;
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+  };
 
   const uploadFile = async (file: File) => {
     const formData = new FormData();
@@ -147,10 +171,86 @@ export default function HostDashboardPage() {
   };
 
   useEffect(() => {
+    const storedAuth = typeof window !== 'undefined' ? window.localStorage.getItem('demo-host-auth') : null;
+    const storedPhone = typeof window !== 'undefined' ? window.localStorage.getItem('demo-current-host-phone') : null;
+    if (storedPhone) {
+      setHostPhone(storedPhone);
+    }
+    if (storedAuth === 'true') {
+      setIsHostAuthed(true);
+    }
     refreshApplicationStatus();
     window.addEventListener('storage', refreshApplicationStatus);
     return () => window.removeEventListener('storage', refreshApplicationStatus);
   }, []);
+
+  const handleHostSendCode = async () => {
+    setHostAuthError('');
+    setHostAuthMessage('');
+    const normalizedPhone = hostPhone.replace(/[^0-9]/g, '').trim();
+    if (!normalizedPhone) {
+      setHostAuthError('شماره موبایل را وارد کنید.');
+      return;
+    }
+
+    try {
+      setHostRequesting(true);
+      const response = await fetch('/api/hosts/auth/request-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: normalizedPhone }),
+      });
+      const payload = await response.json();
+      if (!response.ok || !payload.success) {
+        throw new Error(payload.message || 'ارسال کد ناموفق بود.');
+      }
+
+      setHostAuthStep('code');
+      setHostAuthMessage('کد تایید ارسال شد.');
+    } catch (error) {
+      console.error(error);
+      setHostAuthError(error instanceof Error ? error.message : 'ارسال کد ناموفق بود.');
+    } finally {
+      setHostRequesting(false);
+    }
+  };
+
+  const handleHostVerifyCode = async () => {
+    setHostAuthError('');
+    setHostAuthMessage('');
+    const normalizedPhone = hostPhone.replace(/[^0-9]/g, '').trim();
+    if (!normalizedPhone || !hostCode.trim()) {
+      setHostAuthError('شماره موبایل و کد تایید الزامی است.');
+      return;
+    }
+
+    try {
+      setHostVerifying(true);
+      const response = await fetch('/api/hosts/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: normalizedPhone, code: hostCode.trim() }),
+      });
+      const payload = await response.json();
+      if (!response.ok || !payload.success) {
+        throw new Error(payload.message || 'تایید کد ناموفق بود.');
+      }
+
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem('demo-host-auth', 'true');
+        window.localStorage.setItem('demo-current-host-phone', normalizedPhone);
+      }
+
+      setIsHostAuthed(true);
+      setHostAuthMessage('با موفقیت وارد شدید.');
+      refreshApplicationStatus();
+    } catch (error) {
+      console.error(error);
+      setHostAuthError(error instanceof Error ? error.message : 'تایید کد ناموفق بود.');
+    } finally {
+      setHostVerifying(false);
+    }
+  };
 
   const loadMyVillas = async () => {
     if (!applicationStatus?.id) {
@@ -183,6 +283,23 @@ export default function HostDashboardPage() {
       loadMyVillas();
     }
   }, [activeTab, applicationStatus?.id]);
+
+  useEffect(() => {
+    if (myVillas.length === 0) return;
+    setDiscountForms((prev) => {
+      const next = { ...prev };
+      myVillas.forEach((villa) => {
+        if (next[villa.id]) return;
+        const specs = villa.specifications || {};
+        next[villa.id] = {
+          percent: villa.discount ? String(villa.discount) : '',
+          startDate: specs.discountStartDate || '',
+          endDate: specs.discountEndDate || '',
+        };
+      });
+      return next;
+    });
+  }, [myVillas]);
 
   const handleDocumentSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -423,6 +540,50 @@ export default function HostDashboardPage() {
     await loadMyVillas();
   };
 
+  const updateDiscountForm = (villaId: number, updates: Partial<{ percent: string; startDate: string; endDate: string }>) => {
+    setDiscountForms((prev) => ({
+      ...prev,
+      [villaId]: {
+        percent: prev[villaId]?.percent || '',
+        startDate: prev[villaId]?.startDate || '',
+        endDate: prev[villaId]?.endDate || '',
+        ...updates,
+      },
+    }));
+  };
+
+  const applyDiscountForVilla = async (villa: Product) => {
+    const form = discountForms[villa.id] || { percent: '', startDate: '', endDate: '' };
+    const percentValue = form.percent.trim() ? Number(form.percent) : 0;
+    if (Number.isNaN(percentValue) || percentValue < 0 || percentValue > 100) {
+      setMyVillasError('درصد تخفیف باید بین 0 تا 100 باشد.');
+      return;
+    }
+    if (form.startDate && form.endDate && form.startDate > form.endDate) {
+      setMyVillasError('تاریخ شروع نمی‌تواند بعد از تاریخ پایان باشد.');
+      return;
+    }
+
+    setMyVillasError('');
+    const specs = villa.specifications || {};
+    const nextSpecs = {
+      ...specs,
+      discountStartDate: form.startDate || '',
+      discountEndDate: form.endDate || '',
+    };
+
+    await fetch(`/api/products/${villa.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        discount: percentValue,
+        specifications: nextSpecs,
+      }),
+    });
+
+    await loadMyVillas();
+  };
+
   const getHostDisplayName = (hostId?: number) => {
     if (!hostId) return 'نامشخص';
     return applicationStatus?.id === hostId ? applicationStatus.name : `میزبان #${hostId}`;
@@ -467,39 +628,121 @@ export default function HostDashboardPage() {
       return <div className="rounded-xl border border-wood-100 p-6 text-center text-gray-500">هنوز ویلایی ثبت نشده است.</div>;
     }
 
+    // Helper to check if discount is active and calculate remaining time
+    const getDiscountStatus = (villa: Product) => {
+      const percent = villa.discount || 0;
+      const specs = villa.specifications || {};
+      const start = specs.discountStartDate ? new Date(specs.discountStartDate) : null;
+      const end = specs.discountEndDate ? new Date(specs.discountEndDate) : null;
+      if (end) {
+        end.setHours(23, 59, 59, 999);
+      }
+      const now = new Date();
+      let isActive = false;
+      let remaining = '';
+      if (percent > 0 && start && end && now >= start && now <= end) {
+        isActive = true;
+        // Calculate remaining time (days, hours)
+        const diffMs = end.getTime() - now.getTime();
+        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+        const diffHours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        if (diffDays > 0) {
+          remaining = `${diffDays} روز و ${diffHours} ساعت`;
+        } else if (diffHours > 0) {
+          remaining = `${diffHours} ساعت`;
+        } else {
+          remaining = 'کمتر از ۱ ساعت';
+        }
+      }
+      return { isActive, percent, remaining, start, end };
+    };
+
     return (
       <div className="space-y-3">
-        {myVillas.map((villa) => (
-          <div key={villa.id} className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 rounded-xl border border-wood-100 bg-white p-4">
-            <div>
-              <p className="font-semibold text-wood-800">{villa.name}</p>
-              <p className="text-sm text-gray-500">وضعیت: {getVillaStatusLabel(villa.status)}</p>
-              <p className="text-sm text-gray-500">قیمت پایه: {formatPrice(villa.price)} تومان</p>
-              <p className="text-sm text-gray-500">عکس‌ها: {villa.images.length} مورد</p>
+        {myVillas.map((villa) => {
+          const discount = getDiscountStatus(villa);
+          return (
+            <div key={villa.id} className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 rounded-xl border border-wood-100 bg-white p-4 relative">
+              {/* Discount badge */}
+              {discount.isActive && (
+                <div className="absolute left-4 top-4 z-10 flex items-center gap-2">
+                  <span className="rounded-full bg-red-500 text-white px-3 py-1 text-xs font-bold animate-pulse">تخفیف فعال {discount.percent}%</span>
+                  <span className="rounded-full bg-yellow-100 text-yellow-800 px-2 py-0.5 text-xs">{discount.remaining} باقی‌مانده</span>
+                </div>
+              )}
+              <div>
+                <p className="font-semibold text-wood-800">{villa.name}</p>
+                <p className="text-sm text-gray-500">وضعیت: {getVillaStatusLabel(villa.status)}</p>
+                <p className="text-sm text-gray-500">قیمت پایه: {formatPrice(villa.price)} تومان</p>
+                <p className="text-sm text-gray-500">عکس‌ها: {villa.images.length} مورد</p>
+              </div>
+              <div className="flex flex-col md:flex-row md:items-center gap-2 flex-wrap">
+                <div className="rounded-xl border border-wood-100 bg-cream-50 p-3 text-xs text-gray-700">
+                  <p className="font-semibold text-wood-800 mb-2">تخفیف ویژه</p>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={discountForms[villa.id]?.percent || ''}
+                      onChange={(event) => updateDiscountForm(villa.id, { percent: event.target.value })}
+                      className="rounded-lg border border-wood-200 px-2 py-1 text-xs"
+                      placeholder="درصد"
+                    />
+                    <div className="text-right">
+                      <JalaaliDateTimePicker
+                        className="w-full rounded-lg border border-wood-200 px-2 py-1 text-xs"
+                        value={parseIsoDate(discountForms[villa.id]?.startDate)}
+                        onChange={(value) => updateDiscountForm(villa.id, { startDate: toIsoDate(value) })}
+                        format="jalali"
+                        showTime={false}
+                        clearable
+                        placeholderLabel="تاریخ شروع"
+                      />
+                    </div>
+                    <div className="text-right">
+                      <JalaaliDateTimePicker
+                        className="w-full rounded-lg border border-wood-200 px-2 py-1 text-xs"
+                        value={parseIsoDate(discountForms[villa.id]?.endDate)}
+                        onChange={(value) => updateDiscountForm(villa.id, { endDate: toIsoDate(value) })}
+                        format="jalali"
+                        showTime={false}
+                        clearable
+                        placeholderLabel="تاریخ پایان"
+                      />
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => applyDiscountForVilla(villa)}
+                    className="mt-2 w-full rounded-lg border border-black bg-white px-3 py-1 text-xs font-semibold text-black transition-colors hover:bg-black hover:text-white"
+                  >
+                    اعمال تخفیف
+                  </button>
+                </div>
+                <Link href={`/villa/${villa.id}`} className="flex items-center gap-1 rounded-lg border border-wood-200 px-3 py-1 text-sm text-wood-700">
+                  <PencilSquareIcon className="h-4 w-4" />
+                  مشاهده
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => toggleVillaStatus(villa.id)}
+                  className="rounded-lg border border-wood-200 px-3 py-1 text-sm text-wood-700"
+                >
+                  ارسال مجدد برای تایید
+                </button>
+                <button
+                  type="button"
+                  onClick={() => removeVilla(villa.id)}
+                  className="flex items-center gap-1 rounded-lg border border-red-200 px-3 py-1 text-sm text-red-600"
+                >
+                  <TrashIcon className="h-4 w-4" />
+                  حذف
+                </button>
+              </div>
             </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <Link href={`/villa/${villa.id}`} className="flex items-center gap-1 rounded-lg border border-wood-200 px-3 py-1 text-sm text-wood-700">
-                <PencilSquareIcon className="h-4 w-4" />
-                مشاهده
-              </Link>
-              <button
-                type="button"
-                onClick={() => toggleVillaStatus(villa.id)}
-                className="rounded-lg border border-wood-200 px-3 py-1 text-sm text-wood-700"
-              >
-                ارسال مجدد برای تایید
-              </button>
-              <button
-                type="button"
-                onClick={() => removeVilla(villa.id)}
-                className="flex items-center gap-1 rounded-lg border border-red-200 px-3 py-1 text-sm text-red-600"
-              >
-                <TrashIcon className="h-4 w-4" />
-                حذف
-              </button>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     );
   })();
@@ -522,6 +765,82 @@ export default function HostDashboardPage() {
     }));
   };
 
+  if (!isHostAuthed) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-wood-50 via-cream-50 to-forest-50 py-10">
+        <div className="max-w-md mx-auto px-4">
+          <div className="bg-white rounded-2xl shadow-lg p-8">
+            <div className="text-center mb-8">
+              <div className="w-20 h-20 bg-wood-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <ShieldCheckIcon className="h-10 w-10 text-wood-600" />
+              </div>
+              <h1 className="text-2xl font-bold text-wood-800 mb-2">ورود میزبان</h1>
+              <p className="text-forest-600">برای ورود کد تایید پیامکی دریافت کنید.</p>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-wood-700 font-semibold mb-2">شماره موبایل</label>
+                <input
+                  type="tel"
+                  placeholder="09123456789"
+                  value={hostPhone}
+                  onChange={(event) => setHostPhone(event.target.value)}
+                  disabled={hostAuthStep !== 'phone'}
+                  className="w-full p-3 border border-wood-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-wood-500 text-right disabled:bg-gray-100"
+                />
+              </div>
+
+              {hostAuthStep === 'code' && (
+                <div>
+                  <label className="block text-wood-700 font-semibold mb-2">کد تایید</label>
+                  <input
+                    type="text"
+                    placeholder="کد پیامک شده"
+                    value={hostCode}
+                    onChange={(event) => setHostCode(event.target.value)}
+                    className="w-full p-3 border border-wood-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-wood-500 text-right"
+                  />
+                </div>
+              )}
+
+              {hostAuthStep === 'phone' ? (
+                <button
+                  type="button"
+                  onClick={handleHostSendCode}
+                  disabled={hostRequesting}
+                  className="w-full rounded-lg border border-black bg-white py-3 font-semibold text-black transition-colors hover:bg-black hover:text-white disabled:opacity-50"
+                >
+                  {hostRequesting ? 'در حال ارسال کد...' : 'ارسال کد تایید'}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleHostVerifyCode}
+                  disabled={hostVerifying}
+                  className="w-full rounded-lg border border-black bg-white py-3 font-semibold text-black transition-colors hover:bg-black hover:text-white disabled:opacity-50"
+                >
+                  {hostVerifying ? 'در حال تایید...' : 'تایید کد و ورود'}
+                </button>
+              )}
+
+              {hostAuthMessage && (
+                <div className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">
+                  {hostAuthMessage}
+                </div>
+              )}
+              {hostAuthError && (
+                <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                  {hostAuthError}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-wood-50 via-cream-50 to-forest-50 py-10">
       <div className="max-w-6xl mx-auto px-4">
@@ -540,7 +859,7 @@ export default function HostDashboardPage() {
               {applicationStatus.status === 'pending'
                 ? 'درخواست شما ثبت شده و در پنل ادمین در انتظار بررسی است.'
                 : applicationStatus.status === 'approved'
-                  ? 'درخواست شما تایید شده است. حالا می‌توانید ادامه مدیریت اقامتگاه را انجام دهید.'
+                  ? 'درخواست شما تایید شده است. در مرحله بعد باید مدارک خود را آپلود کنید.'
                   : 'درخواست شما رد شده است. در صورت نیاز می‌توانید اطلاعات را اصلاح و دوباره ارسال کنید.'}
             </p>
           </div>
@@ -708,7 +1027,7 @@ export default function HostDashboardPage() {
                       <button
                         type="button"
                         onClick={addRuleItem}
-                        className="bg-wood-700 text-white px-4 rounded-xl"
+                        className="rounded-xl border border-black bg-white px-4 text-black transition-colors hover:bg-black hover:text-white"
                       >
                         افزودن
                       </button>
@@ -752,7 +1071,7 @@ export default function HostDashboardPage() {
                         <button
                           type="button"
                           onClick={addAmenity}
-                          className="bg-wood-700 text-white px-4 rounded-xl"
+                          className="rounded-xl border border-black bg-white px-4 text-black transition-colors hover:bg-black hover:text-white"
                         >
                           افزودن
                         </button>
@@ -783,7 +1102,7 @@ export default function HostDashboardPage() {
                         <button
                           type="button"
                           onClick={addAccessItem}
-                          className="bg-wood-700 text-white px-4 rounded-xl"
+                          className="rounded-xl border border-black bg-white px-4 text-black transition-colors hover:bg-black hover:text-white"
                         >
                           افزودن
                         </button>
@@ -943,7 +1262,7 @@ export default function HostDashboardPage() {
                       <div className="rounded-2xl border border-wood-100 bg-cream-50 p-4 text-sm text-gray-700">
                         <p className="font-semibold text-wood-800">مرحله دوم ثبت‌نام</p>
                         <p className="mt-1">
-                          لطفاً عکس کارت ملی و جواز یا فرم وکالت ویلا را بارگذاری کنید تا برای بررسی نهایی به ادمین ارسال شود.
+                          اگر هنوز مدارک خود را ثبت نکرده‌اید، لطفاً ابتدا مدارک خود را آپلود کنید تا برای بررسی نهایی به ادمین ارسال شود.
                         </p>
                       </div>
 

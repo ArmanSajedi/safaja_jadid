@@ -7,38 +7,11 @@ import {
 import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid';
 
 import { getPublishedPosts } from '@/lib/magazine';
-import { getPublishedVillas } from '@/lib/villas';
+import { getPublishedVillas, listVillas } from '@/lib/villas';
 
 export const dynamic = 'force-dynamic';
 
 const formatPrice = (price: number) => new Intl.NumberFormat('fa-IR').format(price);
-
-const weeklyOffers = [
-  {
-    id: 11,
-    name: 'ويلا استخردار متل قو',
-    location: 'متل قو',
-    price: 3900000,
-    originalPrice: 5200000,
-    badge: '30% تخفيف',
-  },
-  {
-    id: 12,
-    name: 'کلبه جنگلي ماسال',
-    location: 'ماسال',
-    price: 2100000,
-    originalPrice: 2800000,
-    badge: 'پرفروش',
-  },
-  {
-    id: 13,
-    name: 'ويلا ساحلي رامسر',
-    location: 'رامسر',
-    price: 3200000,
-    originalPrice: 4000000,
-    badge: 'پیشنهاد ويژه',
-  },
-];
 
 const formatMagazineDate = (value: string) => {
   const date = new Date(value);
@@ -57,6 +30,10 @@ const formatMagazineDate = (value: string) => {
 export default async function HomePage() {
   const magazinePosts = await getPublishedPosts(4);
   const featuredVillas = await getPublishedVillas(4);
+  const discountSourceVillas = await listVillas();
+  const discountedVillas = discountSourceVillas.filter((villa) => {
+    return Number(villa.discount) > 0;
+  }).slice(0, 3);
   const featuredMagazinePost = magazinePosts[0] ?? null;
   const recentMagazinePosts = magazinePosts.slice(1);
 
@@ -191,9 +168,9 @@ export default async function HomePage() {
               <Link
                 key={villa.id}
                 href={`/villa/${villa.id}`}
-                className="group card hover-lift block overflow-hidden"
+                className="group block overflow-hidden rounded-2xl bg-white shadow-lg hover-lift"
               >
-                <div className="relative aspect-square mb-4 overflow-hidden rounded-xl bg-cream-100">
+                <div className="relative aspect-square overflow-hidden bg-cream-100">
                   <div className="absolute top-3 right-3 z-10">
                     <span className="rounded-full bg-wood-600 px-3 py-1 text-xs font-medium text-white">
                       {villa.discount > 0 ? `${villa.discount}% تخفیف` : villa.isNew ? 'جدید' : 'ویژه'}
@@ -209,7 +186,7 @@ export default async function HomePage() {
                   )}
                 </div>
 
-                <div className="p-6 pt-0">
+                <div className="p-6 pt-5">
                   <h3 className="mb-2 line-clamp-2 text-lg font-bold text-wood-800 group-hover:text-wood-600 transition-colors">
                     {villa.name}
                   </h3>
@@ -366,38 +343,59 @@ export default async function HomePage() {
             </Link>
           </div>
 
-          <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
-            {weeklyOffers.map((offer) => (
-              <Link
-                key={offer.id}
-                href={`/villa/${offer.id}`}
-                className="group bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl overflow-hidden text-right"
-              >
-                <div className="h-40 bg-gradient-to-br from-wood-100 via-cream-100 to-forest-100 flex items-center justify-center text-4xl">
-                  🏡
-                </div>
-                <div className="p-5">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs bg-red-500 text-white px-2 py-1 rounded-full">
-                      {offer.badge}
-                    </span>
-                    <span className="text-xs text-gray-500">{offer.location}</span>
-                  </div>
-                  <h3 className="text-lg font-bold text-wood-800 mb-2 group-hover:text-wood-600 transition-colors">
-                    {offer.name}
-                  </h3>
-                  <div className="flex items-center gap-3">
-                    <span className="text-lg font-bold text-wood-800">
-                      {offer.price.toLocaleString('fa-IR')} تومان
-                    </span>
-                    <span className="text-sm text-gray-400 line-through">
-                      {offer.originalPrice.toLocaleString('fa-IR')} تومان
-                    </span>
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
+          {discountedVillas.length === 0 ? (
+            <div className="mt-12 text-center text-white/90">
+              هنوز تخفیف فعالی ثبت نشده است.
+            </div>
+          ) : (
+            <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
+              {discountedVillas.map((villa) => {
+                const basePrice = villa.originalPrice && villa.originalPrice > villa.price
+                  ? villa.originalPrice
+                  : villa.price;
+                const discountedPrice = Math.max(0, Math.round(basePrice * (1 - (villa.discount || 0) / 100)));
+                const firstImage = villa.images?.[0];
+                const imageUrl = typeof firstImage === 'string'
+                  ? firstImage
+                  : (firstImage?.url || '');
+
+                return (
+                  <Link
+                    key={villa.id}
+                    href={`/villa/${villa.id}`}
+                    className="group bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl overflow-hidden text-right"
+                  >
+                    <div className="h-40 bg-gradient-to-br from-wood-100 via-cream-100 to-forest-100 flex items-center justify-center text-4xl overflow-hidden">
+                      {imageUrl ? (
+                        <img src={imageUrl} alt={villa.name} className="h-full w-full object-cover" />
+                      ) : (
+                        <span>🏡</span>
+                      )}
+                    </div>
+                    <div className="p-5">
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-xs bg-red-500 text-white px-2 py-1 rounded-full">
+                          تخفیف {villa.discount}%
+                        </span>
+                        <span className="text-xs text-gray-500">{villa.location || villa.category}</span>
+                      </div>
+                      <h3 className="text-lg font-bold text-wood-800 mb-2 group-hover:text-wood-600 transition-colors">
+                        {villa.name}
+                      </h3>
+                      <div className="flex items-center gap-3">
+                        <span className="text-lg font-bold text-wood-800">
+                          {discountedPrice.toLocaleString('fa-IR')} تومان
+                        </span>
+                        <span className="text-sm text-gray-400 line-through">
+                          {basePrice.toLocaleString('fa-IR')} تومان
+                        </span>
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
         </div>
       </section>
 
@@ -671,6 +669,52 @@ export default async function HomePage() {
               📚 مشاهده همه مقالات
               <ArrowLeftIcon className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Contact / Office Info */}
+      <section className="py-20 bg-white">
+        <div className="container-custom">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl font-bold text-wood-800 mb-4">اطلاعات تماس و پشتیبانی</h2>
+            <p className="text-xl text-gray-700 font-medium">
+              برای ارتباط سریع با تیم سفرجا از اطلاعات زیر استفاده کنید.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="rounded-3xl border border-wood-100 bg-cream-50 p-8 shadow-lg">
+              <h3 className="text-2xl font-bold text-wood-800 mb-6">راه‌های ارتباطی</h3>
+              <div className="space-y-5 text-gray-700">
+                <div>
+                  <p className="font-semibold text-wood-800 mb-2">تلفن تماس</p>
+                  <p className="text-lg">011-4244-4703</p>
+                  <p className="mt-1 text-sm text-gray-600">پشتیبانی ۲۴ ساعته</p>
+                </div>
+                <div>
+                  <p className="font-semibold text-wood-800 mb-2">ایمیل</p>
+                  <p className="text-lg">info@safarja.com</p>
+                  <p className="text-lg">support@safarja.com</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-wood-100 bg-white p-8 shadow-lg">
+              <h3 className="text-2xl font-bold text-wood-800 mb-6">آدرس و ساعات کاری</h3>
+              <div className="space-y-5 text-gray-700">
+                <div>
+                  <p className="font-semibold text-wood-800 mb-2">آدرس</p>
+                  <p>مازندران، سوادکوه، شهر شیرگاه</p>
+                  <p>کوچه شهید تیموری، جنب ثبت احوال، دفتر رزرواسیون</p>
+                </div>
+                <div>
+                  <p className="font-semibold text-wood-800 mb-2">ساعات کاری</p>
+                  <p>شنبه تا چهارشنبه: 8 تا 17</p>
+                  <p>پنجشنبه: 8 تا 13</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>

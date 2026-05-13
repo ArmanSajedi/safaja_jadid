@@ -5,6 +5,7 @@ const config: Config = {
     './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
     './src/components/**/*.{js,ts,jsx,tsx,mdx}',
     './src/app/**/*.{js,ts,jsx,tsx,mdx}',
+    './node_modules/jalaali-date-time-picker/dist/**/*.{js,mjs}',
   ],
   theme: {
     extend: {
@@ -48,9 +49,9 @@ const config: Config = {
         }
       },
       fontFamily: {
-        'iran-sans': ['IRANSans', 'Tahoma', 'Arial', 'sans-serif'],
-        'shabnam': ['Shabnam', 'Tahoma', 'Arial', 'sans-serif'],
-        'vazir': ['Vazir', 'Tahoma', 'Arial', 'sans-serif'],
+        'iran-sans': ['Vazirmatn', 'Tahoma', 'Arial', 'sans-serif'],
+        'shabnam': ['Vazirmatn', 'Tahoma', 'Arial', 'sans-serif'],
+        'vazir': ['Vazirmatn', 'Tahoma', 'Arial', 'sans-serif'],
       },
       spacing: {
         '18': '4.5rem',

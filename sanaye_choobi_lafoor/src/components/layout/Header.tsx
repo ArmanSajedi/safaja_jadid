@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Bars3Icon, XMarkIcon, ShoppingBagIcon, UserIcon } from '@heroicons/react/24/outline';
 import { cn } from '@/lib/utils';
@@ -17,6 +17,44 @@ const navigation = [
 
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [accountLabel, setAccountLabel] = useState('حساب کاربری');
+  const [accountHref, setAccountHref] = useState('/account');
+  const [accountAvatar, setAccountAvatar] = useState('');
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const isHostAuthed = window.localStorage.getItem('demo-host-auth') === 'true';
+    const isUserAuthed = window.localStorage.getItem('demo-auth') === 'true';
+
+    if (isHostAuthed) {
+      setAccountLabel('حساب میزبانی');
+      setAccountHref('/hosts/dashboard');
+      setAccountAvatar('م');
+      return;
+    }
+
+    if (isUserAuthed) {
+      setAccountLabel('حساب کاربری');
+      setAccountHref('/account');
+      const storedUser = window.localStorage.getItem('demo-user');
+      if (storedUser) {
+        try {
+          const parsed = JSON.parse(storedUser) as { firstName?: string; lastName?: string };
+          const initials = `${parsed.firstName?.[0] || ''}${parsed.lastName?.[0] || ''}`.trim();
+          setAccountAvatar(initials || 'ک');
+        } catch {
+          setAccountAvatar('ک');
+        }
+      } else {
+        setAccountAvatar('ک');
+      }
+      return;
+    }
+
+    setAccountLabel('حساب کاربری');
+    setAccountHref('/account');
+    setAccountAvatar('');
+  }, []);
 
   return (
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-cream-200 shadow-sm">
@@ -25,20 +63,12 @@ export default function Header() {
           {/* Logo */}
           <div className="flex items-center">
             <Link href="/" className="flex items-center space-x-3 space-x-reverse">
-              <div className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-br from-wood-500 via-wood-600 to-wood-700 rounded-xl shadow-lg flex items-center justify-center relative overflow-hidden group">
-                {/* Wood grain pattern background */}
-                <div 
-                  className="absolute inset-0 opacity-30"
-                  style={{
-                    backgroundImage: `url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="logoGrain" patternUnits="userSpaceOnUse" width="20" height="20"><path d="M0,10 Q5,8 10,10 T20,10" stroke="%23654321" stroke-width="0.5" fill="none" opacity="0.6"/><path d="M0,15 Q5,13 10,15 T20,15" stroke="%234A2C2A" stroke-width="0.3" fill="none" opacity="0.4"/></pattern></defs><rect width="100" height="100" fill="url(%23logoGrain)"/></svg>')`
-                  }}
+              <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl shadow-lg flex items-center justify-center bg-white border border-cream-200 overflow-hidden">
+                <img
+                  src="/safarja_logo2.png"
+                  alt="سفرجا"
+                  className="h-full w-full object-contain"
                 />
-                {/* Tree icon with leaves */}
-                <div className="relative z-10 text-center group-hover:scale-110 transition-transform duration-300">
-                  <span className="text-white text-xl font-bold">🌳</span>
-                </div>
-                {/* Subtle glow effect */}
-                <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-forest-500/20 rounded-xl"></div>
               </div>
               <div className="hidden sm:flex flex-col">
                 <h1 className="text-xl font-bold text-wood-800 leading-tight">اجاره ویلا سفرجا</h1>
@@ -76,8 +106,15 @@ export default function Header() {
             </Link>
 
             {/* User Account */}
-            <Link href="/account" className="p-2 text-gray-600 hover:text-wood-700 transition-colors">
-              <UserIcon className="w-5 h-5" />
+            <Link href={accountHref} className="p-2 text-gray-600 hover:text-wood-700 transition-colors flex items-center gap-2">
+              {accountAvatar ? (
+                <span className="h-7 w-7 rounded-full bg-wood-100 text-wood-700 text-xs font-bold flex items-center justify-center">
+                  {accountAvatar}
+                </span>
+              ) : (
+                <UserIcon className="w-5 h-5" />
+              )}
+              <span className="hidden md:inline text-sm font-medium">{accountLabel}</span>
             </Link>
 
             {/* Admin Panel */}

@@ -57,3 +57,42 @@ export const villas = sqliteTable('villas', {
   updatedAt: text('updated_at').notNull(),
   publishedAt: text('published_at'),
 });
+
+export const users = sqliteTable('users', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  firstName: text('first_name').notNull(),
+  lastName: text('last_name').notNull(),
+  phone: text('phone').notNull().unique(),
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+  lastLoginAt: text('last_login_at'),
+});
+
+export const otpCodes = sqliteTable('otp_codes', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  phone: text('phone').notNull(),
+  code: text('code').notNull(),
+  createdAt: text('created_at').notNull(),
+  expiresAt: text('expires_at').notNull(),
+  usedAt: text('used_at'),
+});
+
+export const hostOtpCodes = sqliteTable('host_otp_codes', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  hostId: integer('host_id').notNull(),
+  phone: text('phone').notNull(),
+  code: text('code').notNull(),
+  createdAt: text('created_at').notNull(),
+  expiresAt: text('expires_at').notNull(),
+  usedAt: text('used_at'),
+});
+
+export const reviews = sqliteTable('reviews', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  villaId: integer('villa_id').notNull(),
+  userName: text('user_name').notNull(),
+  rating: integer('rating').notNull(),
+  comment: text('comment').notNull(),
+  status: text('status').notNull().default('approved'),
+  createdAt: text('created_at').notNull(),
+});

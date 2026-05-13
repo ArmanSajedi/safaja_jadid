@@ -4,7 +4,7 @@ import path from 'path';
 import initSqlJs from 'sql.js';
 import { drizzle } from 'drizzle-orm/sql-js';
 
-import { posts, hosts, villas } from './schema';
+import { posts, hosts, villas, users, otpCodes, hostOtpCodes, reviews } from './schema';
 
 const databasePath = path.join(process.cwd(), 'prisma', 'dev.db');
 const databaseDirectory = path.dirname(databasePath);
@@ -94,8 +94,51 @@ const loadDatabase = async () => {
       published_at text
     );
   `);
+  sqliteDatabase.exec(`
+    CREATE TABLE IF NOT EXISTS users (
+      id integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+      first_name text NOT NULL,
+      last_name text NOT NULL,
+      phone text NOT NULL UNIQUE,
+      created_at text NOT NULL,
+      updated_at text NOT NULL,
+      last_login_at text
+    );
+  `);
+  sqliteDatabase.exec(`
+    CREATE TABLE IF NOT EXISTS otp_codes (
+      id integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+      phone text NOT NULL,
+      code text NOT NULL,
+      created_at text NOT NULL,
+      expires_at text NOT NULL,
+      used_at text
+    );
+  `);
+  sqliteDatabase.exec(`
+    CREATE TABLE IF NOT EXISTS host_otp_codes (
+      id integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+      host_id integer NOT NULL,
+      phone text NOT NULL,
+      code text NOT NULL,
+      created_at text NOT NULL,
+      expires_at text NOT NULL,
+      used_at text
+    );
+  `);
+  sqliteDatabase.exec(`
+    CREATE TABLE IF NOT EXISTS reviews (
+      id integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+      villa_id integer NOT NULL,
+      user_name text NOT NULL,
+      rating integer NOT NULL,
+      comment text NOT NULL,
+      status text NOT NULL DEFAULT 'approved',
+      created_at text NOT NULL
+    );
+  `);
 
-  initializedDb = drizzle(sqliteDatabase, { schema: { posts, hosts, villas } });
+  initializedDb = drizzle(sqliteDatabase, { schema: { posts, hosts, villas, users, otpCodes, hostOtpCodes, reviews } });
 
   return sqliteDatabase;
 };

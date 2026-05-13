@@ -100,8 +100,12 @@ export default function Footer() {
             {/* Company Info */}
             <div className="lg:col-span-2">
               <div className="flex items-center space-x-3 space-x-reverse mb-6">
-                <div className="w-12 h-12 bg-gradient-to-br from-wood-500 to-wood-700 rounded-xl flex items-center justify-center">
-                  <span className="text-white font-bold text-xl">ل</span>
+                <div className="w-12 h-12 rounded-xl bg-white border border-cream-200 flex items-center justify-center overflow-hidden">
+                  <img
+                    src="/safarja_logo2.png"
+                    alt="سفرجا"
+                    className="h-full w-full object-contain"
+                  />
                 </div>
                 <div>
                   <h3 className="text-xl font-bold text-wood-800">اجاره ویلا سفرجا</h3>
@@ -117,15 +121,15 @@ export default function Footer() {
               <div className="space-y-3">
                 <div className="flex items-center space-x-3 space-x-reverse text-gray-600">
                   <PhoneIcon className="w-5 h-5 text-forest-600 flex-shrink-0" />
-                  <span>۰۲۱-۱۲۳۴۵۶۷۸</span>
+                  <span>011-4244-4703</span>
                 </div>
                 <div className="flex items-center space-x-3 space-x-reverse text-gray-600">
                   <EnvelopeIcon className="w-5 h-5 text-forest-600 flex-shrink-0" />
-                  <span>info@laforvillas.ir</span>
+                  <span>info@safarja.com</span>
                 </div>
                 <div className="flex items-start space-x-3 space-x-reverse text-gray-600">
                   <MapPinIcon className="w-5 h-5 text-forest-600 flex-shrink-0 mt-0.5" />
-                  <span>تهران، خیابان آزادی، پلاک ۱۲۳</span>
+                  <span>مازندران، سوادکوه، شهر شیرگاه</span>
                 </div>
               </div>
             </div>
