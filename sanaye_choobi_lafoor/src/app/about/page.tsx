@@ -11,22 +11,24 @@ import {
 } from '@heroicons/react/24/outline';
 
 export default function AboutPage() {
+  const [pageContent, setPageContent] = React.useState<any>(null);
+
+  React.useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/admin/pages');
+        const payload = await res.json();
+        if (res.ok && payload.success) setPageContent(payload.data.about || null);
+      } catch (err) {
+        // ignore
+      }
+    })();
+  }, []);
+
   const stats = [
-    const [pageContent, setPageContent] = React.useState<any>(null);
-
-    React.useEffect(() => {
-      (async () => {
-        try {
-          const res = await fetch('/api/admin/pages');
-          const payload = await res.json();
-          if (res.ok && payload.success) setPageContent(payload.data.about || null);
-        } catch (err) {
-          // ignore
-        }
-      })();
-    }, []);
-
-    const stats = [
+    { number: '10+', label: 'سال تجربه', icon: ClockIcon },
+    { number: '150K+', label: 'مهمان راضی', icon: UsersIcon },
+    { number: '1,500+', label: 'اقامتگاه فعال', icon: TrophyIcon },
     { number: '28+', label: 'استان تحت پوشش', icon: GlobeAltIcon }
   ];
 
@@ -55,11 +57,9 @@ export default function AboutPage() {
         <div className="absolute inset-0 bg-black bg-opacity-20"></div>
         <div className="max-w-7xl mx-auto px-4 relative z-10">
           <div className="text-center">
-            <h1 className="text-5xl font-bold mb-6">درباره شرکت تجارت الکترونیک آسایش سفر (سفرجا)</h1>
+            <h1 className="text-5xl font-bold mb-6">{pageContent?.title ?? 'درباره شرکت تجارت الکترونیک آسایش سفر (سفرجا)'}</h1>
             <p className="text-xl max-w-3xl mx-auto leading-relaxed">
-                {pageContent?.title ?? 'درباره اجاره ویلا سفرجا'}</h1>
-                <p className="text-xl max-w-3xl mx-auto leading-relaxed">
-                  {pageContent?.intro ?? 'از سال ۱۳۹۲ همراه شما هستیم تا اقامتگاهی امن و دلنشین پیدا کنید'}
+              {pageContent?.intro ?? 'از سال ۱۳۹۲ همراه شما هستیم تا اقامتگاهی امن و دلنشین پیدا کنید'}
             </p>
           </div>
         </div>
