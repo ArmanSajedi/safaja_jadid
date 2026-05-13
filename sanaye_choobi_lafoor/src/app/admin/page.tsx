@@ -287,6 +287,7 @@ export default function AdminDashboardPage() {
   const [pagesData, setPagesData] = useState<any>(null);
   const [pagesLoading, setPagesLoading] = useState(false);
   const [pagesError, setPagesError] = useState<string | null>(null);
+  const [selectedPage, setSelectedPage] = useState<'about' | 'services'>('about');
 
   const loadPages = async () => {
     try {
@@ -1287,6 +1288,20 @@ export default function AdminDashboardPage() {
                     {pagesData ? (
                       <div className="space-y-4">
                         <div>
+                          <label className="block font-semibold mb-2">انتخاب صفحه</label>
+                          <select
+                            className="w-full rounded-lg border border-wood-200 px-3 py-2"
+                            value={selectedPage}
+                            onChange={(e) => setSelectedPage(e.target.value as 'about' | 'services')}
+                          >
+                            <option value="about">درباره ما</option>
+                            <option value="services">خدمات اقامت</option>
+                          </select>
+                        </div>
+
+                        {selectedPage === 'about' && (
+                          <>
+                        <div>
                           <label className="block font-semibold mb-2">عنوان درباره ما</label>
                           <input className="w-full p-3 border rounded-lg" value={pagesData.about.title} onChange={(e) => setPagesData({ ...pagesData, about: { ...pagesData.about, title: e.target.value } })} />
                         </div>
@@ -1298,9 +1313,25 @@ export default function AdminDashboardPage() {
                           <label className="block font-semibold mb-2">متن داستان ما</label>
                           <textarea className="w-full p-3 border rounded-lg" rows={8} value={pagesData.about.story} onChange={(e) => setPagesData({ ...pagesData, about: { ...pagesData.about, story: e.target.value } })} />
                         </div>
+                          </>
+                        )}
+
+                        {selectedPage === 'services' && (
+                          <>
+                        <div>
+                          <label className="block font-semibold mb-2">عنوان خدمات</label>
+                          <input className="w-full p-3 border rounded-lg" value={pagesData.services.heroTitle} onChange={(e) => setPagesData({ ...pagesData, services: { ...pagesData.services, heroTitle: e.target.value } })} />
+                        </div>
+                        <div>
+                          <label className="block font-semibold mb-2">متن معرفی خدمات</label>
+                          <textarea className="w-full p-3 border rounded-lg" rows={4} value={pagesData.services.heroIntro} onChange={(e) => setPagesData({ ...pagesData, services: { ...pagesData.services, heroIntro: e.target.value } })} />
+                        </div>
+                          </>
+                        )}
+
                         <div className="flex gap-3">
-                          <button className="bg-wood-700 text-white px-4 py-2 rounded-lg" onClick={() => savePages(pagesData)}>ذخیره</button>
-                          <button className="border border-wood-200 px-4 py-2 rounded-lg" onClick={() => loadPages()}>بازنشانی</button>
+                          <button className="bg-black text-white px-4 py-2 rounded-lg font-semibold shadow-md hover:bg-gray-800 transition-colors" onClick={() => savePages(pagesData)}>ذخیره</button>
+                          <button className="border border-wood-200 px-4 py-2 rounded-lg font-medium text-wood-700 hover:bg-wood-50 transition-colors" onClick={() => loadPages()}>بازنشانی</button>
                         </div>
                       </div>
                     ) : (

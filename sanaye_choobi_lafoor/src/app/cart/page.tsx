@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { TrashIcon, PlusIcon, MinusIcon, ShoppingCartIcon } from '@heroicons/react/24/outline';
 import Link from 'next/link';
 
 export default function CartPage() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [cartItems, setCartItems] = useState([
     {
       id: 1,
@@ -29,6 +30,11 @@ export default function CartPage() {
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('fa-IR').format(price);
   };
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    setIsLoggedIn(window.localStorage.getItem('demo-auth') === 'true');
+  }, []);
 
   const updateQuantity = (id: number, newQuantity: number) => {
     if (newQuantity === 0) {
@@ -56,6 +62,26 @@ export default function CartPage() {
       return total;
     }, 0);
   };
+
+  if (!isLoggedIn) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-wood-50 via-cream-50 to-forest-50 py-8">
+        <div className="max-w-4xl mx-auto px-4">
+          <div className="text-center py-16 bg-white rounded-2xl shadow-lg border border-wood-100">
+            <ShoppingCartIcon className="h-24 w-24 text-wood-300 mx-auto mb-6" />
+            <h1 className="text-3xl font-bold text-wood-800 mb-4">برای مشاهده سبد خرید باید وارد حساب کاربری شوید</h1>
+            <p className="text-forest-600 mb-8">پس از ورود، سبد خرید و رزروهای شما نمایش داده می‌شود.</p>
+            <Link
+              href="/account"
+              className="inline-block bg-black text-white px-8 py-3 rounded-lg hover:bg-gray-800 transition-colors font-semibold"
+            >
+              ورود به حساب کاربری
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (cartItems.length === 0) {
     return (

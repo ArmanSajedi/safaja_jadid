@@ -17,6 +17,7 @@ const navigation = [
 
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isUserAuthed, setIsUserAuthed] = useState(false);
   const [accountLabel, setAccountLabel] = useState('حساب کاربری');
   const [accountHref, setAccountHref] = useState('/account');
   const [accountAvatar, setAccountAvatar] = useState('');
@@ -25,6 +26,7 @@ export default function Header() {
     if (typeof window === 'undefined') return;
     const isHostAuthed = window.localStorage.getItem('demo-host-auth') === 'true';
     const isUserAuthed = window.localStorage.getItem('demo-auth') === 'true';
+    setIsUserAuthed(isUserAuthed);
 
     if (isHostAuthed) {
       setAccountLabel('حساب میزبانی');
@@ -97,7 +99,7 @@ export default function Header() {
           </nav>
 
           {/* Action Buttons */}
-          <div className="flex items-center space-x-4 space-x-reverse ml-auto">
+          <div className="flex items-center space-x-4 space-x-reverse ms-auto">
             {/* Search Button */}
             <Link href="/search" className="p-2 text-gray-600 hover:text-wood-700 transition-colors">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -117,26 +119,20 @@ export default function Header() {
               <span className="hidden md:inline text-sm font-medium">{accountLabel}</span>
             </Link>
 
-            {/* Admin Panel */}
-            <Link href="/admin/products" className="p-2 text-gray-600 hover:text-wood-700 transition-colors" title="پنل ادمین">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-            </Link>
-
             {/* Shopping Cart */}
-            <Link href="/cart" className="relative p-2 text-gray-600 hover:text-wood-700 transition-colors">
-              <ShoppingBagIcon className="w-5 h-5" />
-              <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-                2
-              </span>
-            </Link>
+            {isUserAuthed && (
+              <Link href="/cart" className="relative p-2 text-gray-600 hover:text-wood-700 transition-colors" title="سبد خرید">
+                <ShoppingBagIcon className="w-5 h-5" />
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                  2
+                </span>
+              </Link>
+            )}
 
             {/* Mobile Menu Button */}
             <button
               type="button"
-              className="lg:hidden p-2 text-gray-600 hover:text-wood-700 transition-colors"
+              className="order-last lg:order-none lg:hidden p-2 text-gray-600 hover:text-wood-700 transition-colors"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             >
               {mobileMenuOpen ? (
